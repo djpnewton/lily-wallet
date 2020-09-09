@@ -7,7 +7,7 @@ import { generateMnemonic } from "bip39";
 
 import { createMultisigConfigFile, createSinglesigConfigFile, createSinglesigHWWConfigFile, createColdCardBlob, downloadFile, formatFilename } from '../../utils/files';
 import { black } from '../../utils/colors';
-import { getMultisigDeriationPathForNetwork, getP2shDeriationPathForNetwork } from '../../utils/transactions';
+import { getMultisigDeriationPathForNetwork, getP2shDeriationPathForNetwork, getP2pkhDeriationPathForNetwork } from '../../utils/transactions';
 
 import StepGroups from './Steps';
 import PageHeader from './PageHeader';
@@ -71,8 +71,9 @@ const Setup = ({ config, setConfigFile, currentBitcoinNetwork }) => {
       const response = await window.ipcRenderer.invoke('/xpub', {
         deviceType: device.type,
         devicePath: device.path,
-        path: getP2shDeriationPathForNetwork(currentBitcoinNetwork) // we are assuming BIP48 P2WSH wallet
-      });
+        //path: getP2shDeriationPathForNetwork(currentBitcoinNetwork) // we are assuming BIP48 P2WSH wallet
+        path: getP2pkhDeriationPathForNetwork(currentBitcoinNetwork) // we are assuming BIP44 P2PKH wallet
+    });
 
       setImportedDevices([...importedDevices, { ...device, ...response }]);
       availableDevices.splice(index, 1);

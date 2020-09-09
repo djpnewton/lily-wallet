@@ -18,6 +18,8 @@ const getDerivationPath = (addressType, bip32Path, currentBitcoinNetwork) => {
     return `${getMultisigDeriationPathForNetwork(currentBitcoinNetwork)}/${childPubKeysBip32Path.replace('m/', '')}`;
   } else if (addressType === 'p2sh') {
     return `${getP2shDeriationPathForNetwork(currentBitcoinNetwork)}/${childPubKeysBip32Path.replace('m/', '')}`;
+  } else if (addressType === 'p2pkh') {
+    return `${getP2pkhDeriationPathForNetwork(currentBitcoinNetwork)}/${childPubKeysBip32Path.replace('m/', '')}`;
   } else { // p2wpkh
     return `${getP2wpkhDeriationPathForNetwork(currentBitcoinNetwork)}/${childPubKeysBip32Path.replace('m/', '')}`;
   }
@@ -50,6 +52,16 @@ const getP2wpkhDeriationPathForNetwork = (network) => {
     return "m/84'/1'/0'"
   } else { // return mainnet by default...this should never run though
     return "m/84'/0'/0'"
+  }
+}
+
+const getP2pkhDeriationPathForNetwork = (network) => {
+  if (bitcoinNetworkEqual(network, networks.bitcoin)) {
+    return "m/44'/0'/0'"
+  } else if (bitcoinNetworkEqual(network, networks.testnet)) {
+    return "m/44'/1'/0'"
+  } else { // return mainnet by default...this should never run though
+    return "m/44'/0'/0'"
   }
 }
 
@@ -177,6 +189,8 @@ const getAddressFromPubKey = (childPubKey, addressType, currentBitcoinNetwork) =
       redeem: payments.p2wpkh({ pubkey: Buffer.from(childPubKey.childPubKey, 'hex'), network: currentBitcoinNetwork }),
       network: currentBitcoinNetwork
     });
+  } else if (addressType === 'p2pkh') {
+    address = payments.p2pkh({ pubkey: Buffer.from(childPubKey.childPubKey, 'hex'), network: currentBitcoinNetwork });
   } else { // p2wpkh
     address = payments.p2wpkh({ pubkey: Buffer.from(childPubKey.childPubKey, 'hex'), network: currentBitcoinNetwork });
   }
@@ -197,8 +211,8 @@ const getAddressFromAccount = (account, path, currentBitcoinNetwork) => {
     return getMultisigAddressFromPubKeys(childPubKeys, account, currentBitcoinNetwork)
   } else { // single sig
     if (account.device) {
-      const receivePubKey = getChildPubKeyFromXpub(account, path, 'p2sh', currentBitcoinNetwork);
-      return getAddressFromPubKey(receivePubKey, 'p2sh', currentBitcoinNetwork);
+      const receivePubKey = getChildPubKeyFromXpub(account, path, 'p2pkh', currentBitcoinNetwork);
+      return getAddressFromPubKey(receivePubKey, 'p2pkh', currentBitcoinNetwork);
     } else {
       const receivePubKey = getChildPubKeyFromXpub(account, path, 'p2wpkh', currentBitcoinNetwork);
       return getAddressFromPubKey(receivePubKey, 'p2wpkh', currentBitcoinNetwork);
@@ -251,7 +265,7 @@ const scanForAddressesAndTransactions = async (account, currentBitcoinNetwork, l
 }
 
 const getDataFromMultisig = async (account, currentBitcoinNetwork) => {
-  const { receiveAddresses, changeAddresses, unusedReceiveAddresses, unusedChangeAddresses, transactions } = await scanForAddressesAndTransactions(account, currentBitcoinNetwork, 10)
+  const { receiveAddresses, changeAddresses, unusedReceiveAddresses, unusedChangeAddresses, transactions } = await scanForAddressesAndTransactions(account, currentBitcoinNetwork, 20)
   const availableUtxos = await getUtxosForAddresses(receiveAddresses.concat(changeAddresses), currentBitcoinNetwork);
   const organizedTransactions = serializeTransactions(transactions, receiveAddresses, changeAddresses);
 
@@ -259,7 +273,7 @@ const getDataFromMultisig = async (account, currentBitcoinNetwork) => {
 }
 
 const getDataFromXPub = async (account, currentBitcoinNetwork) => {
-  const { receiveAddresses, changeAddresses, unusedReceiveAddresses, unusedChangeAddresses, transactions } = await scanForAddressesAndTransactions(account, currentBitcoinNetwork, 10)
+  const { receiveAddresses, changeAddresses, unusedReceiveAddresses, unusedChangeAddresses, transactions } = await scanForAddressesAndTransactions(account, currentBitcoinNetwork, 20)
 
   const availableUtxos = await getUtxosForAddresses(receiveAddresses.concat(changeAddresses), currentBitcoinNetwork);
   const organizedTransactions = serializeTransactions(transactions, receiveAddresses, changeAddresses);
@@ -272,6 +286,7 @@ module.exports = {
   getMultisigDeriationPathForNetwork: getMultisigDeriationPathForNetwork,
   getP2shDeriationPathForNetwork: getP2shDeriationPathForNetwork,
   getP2wpkhDeriationPathForNetwork: getP2wpkhDeriationPathForNetwork,
+  getP2pkhDeriationPathForNetwork: getP2pkhDeriationPathForNetwork,
   createAddressMapFromAddressArray: createAddressMapFromAddressArray,
   getDataFromMultisig: getDataFromMultisig,
   getDataFromXPub: getDataFromXPub,
