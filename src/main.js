@@ -10,7 +10,12 @@ const { getDataFromMultisig, getDataFromXPub } = require('./utils/transactions')
 
 const path = require('path');
 
+// user adjustable environment variables
+const devurl = 'DEVURL' in process.env;
 const currentBitcoinNetwork = 'TESTNET' in process.env ? networks.testnet : networks.bitcoin;
+const legacyHwAccounts = 'LEGACYHWACCOUNTS' in process.env;
+const newAccountNum = 'NEWACCOUNTNUM' in process.env ? parseInt(process.env.NEWACCOUNTNUM) : 0;
+const gapLimit = 'GAPLIMIT' in process.env ? parseInt(process.env.GAPLIMIT) : 10;
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -32,7 +37,7 @@ function createWindow() {
 
   mainWindow.maximize();
 
-  if ('DEVURL' in process.env) {
+  if (devurl) {
     // load dev url
     mainWindow.loadURL(`http://localhost:3001/`);
   } else {
@@ -89,9 +94,9 @@ ipcMain.on('/account-data', async (event, args) => {
   let addresses, changeAddresses, transactions, unusedAddresses, unusedChangeAddresses, availableUtxos;
 
   if (config.quorum.totalSigners > 1) {
-    [addresses, changeAddresses, transactions, unusedAddresses, unusedChangeAddresses, availableUtxos] = await getDataFromMultisig(config, currentBitcoinNetwork);
+    [addresses, changeAddresses, transactions, unusedAddresses, unusedChangeAddresses, availableUtxos] = await getDataFromMultisig(config, currentBitcoinNetwork, gapLimit);
   } else {
-    [addresses, changeAddresses, transactions, unusedAddresses, unusedChangeAddresses, availableUtxos] = await getDataFromXPub(config, currentBitcoinNetwork);
+    [addresses, changeAddresses, transactions, unusedAddresses, unusedChangeAddresses, availableUtxos] = await getDataFromXPub(config, currentBitcoinNetwork, gapLimit);
   }
 
   const currentBalance = availableUtxos.reduce((accum, utxo) => accum.plus(utxo.value), BigNumber(0));
@@ -111,8 +116,8 @@ ipcMain.on('/account-data', async (event, args) => {
   event.reply('/account-data', accountData);
 });
 
-ipcMain.handle('/bitcoin-network', async (event, args) => {
-  return Promise.resolve(currentBitcoinNetwork)
+ipcMain.handle('/env', async (event, args) => {
+  return Promise.resolve({currentBitcoinNetwork, legacyHwAccounts, newAccountNum, gapLimit})
 });
 
 ipcMain.handle('/historical-btc-price', async (event, args) => {

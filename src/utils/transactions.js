@@ -12,56 +12,64 @@ const bitcoinNetworkEqual = (a, b) => {
   return a.bech32 === b.bech32;
 }
 
-const getDerivationPath = (addressType, bip32Path, currentBitcoinNetwork) => {
+const getDerivationPath = (addressType, bip32Path, currentBitcoinNetwork, accountNum) => {
   const childPubKeysBip32Path = bip32Path;
   if (addressType === 'multisig') {
-    return `${getMultisigDeriationPathForNetwork(currentBitcoinNetwork)}/${childPubKeysBip32Path.replace('m/', '')}`;
+    return `${getMultisigDeriationPathForNetwork(currentBitcoinNetwork, accountNum)}/${childPubKeysBip32Path.replace('m/', '')}`;
   } else if (addressType === 'p2sh') {
-    return `${getP2shDeriationPathForNetwork(currentBitcoinNetwork)}/${childPubKeysBip32Path.replace('m/', '')}`;
+    return `${getP2shDeriationPathForNetwork(currentBitcoinNetwork, accountNum)}/${childPubKeysBip32Path.replace('m/', '')}`;
   } else if (addressType === 'p2pkh') {
-    return `${getP2pkhDeriationPathForNetwork(currentBitcoinNetwork)}/${childPubKeysBip32Path.replace('m/', '')}`;
+    return `${getP2pkhDeriationPathForNetwork(currentBitcoinNetwork, accountNum)}/${childPubKeysBip32Path.replace('m/', '')}`;
   } else { // p2wpkh
-    return `${getP2wpkhDeriationPathForNetwork(currentBitcoinNetwork)}/${childPubKeysBip32Path.replace('m/', '')}`;
+    return `${getP2wpkhDeriationPathForNetwork(currentBitcoinNetwork, accountNum)}/${childPubKeysBip32Path.replace('m/', '')}`;
   }
 }
 
-const getMultisigDeriationPathForNetwork = (network) => {
+const getMultisigDeriationPathForNetwork = (network, accountNum) => {
+  if (typeof accountNum === 'undefined')
+    throw new Error('accountNum is undefined');
   if (bitcoinNetworkEqual(network, networks.bitcoin)) {
-    return "m/48'/0'/0'/2'"
+    return `m/48'/0'/${accountNum}'/2'`
   } else if (bitcoinNetworkEqual(network, networks.testnet)) {
-    return "m/48'/1'/0'/2'"
+    return `m/48'/1'/${accountNum}'/2'`
   } else { // return mainnet by default...this should never run though
-    return "m/48'/0'/0'/2'"
+    return `m/48'/0'/${accountNum}'/2'`
   }
 }
 
-const getP2shDeriationPathForNetwork = (network) => {
+const getP2shDeriationPathForNetwork = (network, accountNum) => {
+  if (typeof accountNum === 'undefined')
+    throw new Error('accountNum is undefined');
   if (bitcoinNetworkEqual(network, networks.bitcoin)) {
-    return "m/49'/0'/0'"
+    return `m/49'/0'/${accountNum}'`
   } else if (bitcoinNetworkEqual(network, networks.testnet)) {
-    return "m/49'/1'/0'"
+    return `m/49'/1'/${accountNum}'`
   } else { // return mainnet by default...this should never run though
-    return "m/49'/0'/0'"
+    return `m/49'/0'/${accountNum}'`
   }
 }
 
-const getP2wpkhDeriationPathForNetwork = (network) => {
+const getP2wpkhDeriationPathForNetwork = (network, accountNum) => {
+  if (typeof accountNum === 'undefined')
+    throw new Error('accountNum is undefined');
   if (bitcoinNetworkEqual(network, networks.bitcoin)) {
-    return "m/84'/0'/0'"
+    return `m/84'/0'/${accountNum}'`
   } else if (bitcoinNetworkEqual(network, networks.testnet)) {
-    return "m/84'/1'/0'"
+    return `m/84'/1'/${accountNum}'`
   } else { // return mainnet by default...this should never run though
-    return "m/84'/0'/0'"
+    return `m/84'/0'/${accountNum}'`
   }
 }
 
-const getP2pkhDeriationPathForNetwork = (network) => {
+const getP2pkhDeriationPathForNetwork = (network, accountNum) => {
+  if (typeof accountNum === 'undefined')
+    throw new Error('accountNum is undefined');
   if (bitcoinNetworkEqual(network, networks.bitcoin)) {
-    return "m/44'/0'/0'"
+    return `m/44'/0'/${accountNum}'`
   } else if (bitcoinNetworkEqual(network, networks.testnet)) {
-    return "m/44'/1'/0'"
+    return `m/44'/1'/${accountNum}'`
   } else { // return mainnet by default...this should never run though
-    return "m/44'/0'/0'"
+    return `m/44'/0'/${accountNum}'`
   }
 }
 
@@ -146,9 +154,9 @@ const serializeTransactions = (transactionsFromBlockstream, addresses, changeAdd
   return transactionsArray;
 }
 
-const getChildPubKeyFromXpub = (xpub, bip32Path, addressType, currentBitcoinNetwork) => {
+const getChildPubKeyFromXpub = (xpub, bip32Path, addressType, currentBitcoinNetwork, accountNum) => {
   const childPubKeysBip32Path = bip32Path;
-  let bip32derivationPath = getDerivationPath(addressType, bip32Path, currentBitcoinNetwork);
+  let bip32derivationPath = getDerivationPath(addressType, bip32Path, currentBitcoinNetwork, accountNum);
 
   return {
     childPubKey: deriveChildPublicKey(xpub.xpub, childPubKeysBip32Path, getUnchainedNetworkFromBjslibNetwork(currentBitcoinNetwork)),
@@ -204,17 +212,21 @@ const getTransactionsFromAddress = async (address, currentBitcoinNetwork) => {
 }
 
 const getAddressFromAccount = (account, path, currentBitcoinNetwork) => {
+  let accountNum = 0;
+  if ('accountNum' in account)
+    accountNum = account.accountNum;
   if (account.quorum.totalSigners > 1) { // multisig
     const childPubKeys = account.extendedPublicKeys.map((extendedPublicKey) => {
-      return getChildPubKeyFromXpub(extendedPublicKey, path, 'multisig', currentBitcoinNetwork)
+      return getChildPubKeyFromXpub(extendedPublicKey, path, 'multisig', currentBitcoinNetwork, accountNum)
     })
     return getMultisigAddressFromPubKeys(childPubKeys, account, currentBitcoinNetwork)
   } else { // single sig
     if (account.device) {
-      const receivePubKey = getChildPubKeyFromXpub(account, path, 'p2pkh', currentBitcoinNetwork);
-      return getAddressFromPubKey(receivePubKey, 'p2pkh', currentBitcoinNetwork);
+      let addressType = account.addressType.toLowerCase();
+      const receivePubKey = getChildPubKeyFromXpub(account, path, addressType, currentBitcoinNetwork, accountNum);
+      return getAddressFromPubKey(receivePubKey, addressType, currentBitcoinNetwork);
     } else {
-      const receivePubKey = getChildPubKeyFromXpub(account, path, 'p2wpkh', currentBitcoinNetwork);
+      const receivePubKey = getChildPubKeyFromXpub(account, path, 'p2wpkh', currentBitcoinNetwork, accountNum);
       return getAddressFromPubKey(receivePubKey, 'p2wpkh', currentBitcoinNetwork);
     }
   }
@@ -264,16 +276,16 @@ const scanForAddressesAndTransactions = async (account, currentBitcoinNetwork, l
   return { receiveAddresses, changeAddresses, unusedReceiveAddresses, unusedChangeAddresses, transactions }
 }
 
-const getDataFromMultisig = async (account, currentBitcoinNetwork) => {
-  const { receiveAddresses, changeAddresses, unusedReceiveAddresses, unusedChangeAddresses, transactions } = await scanForAddressesAndTransactions(account, currentBitcoinNetwork, 20)
+const getDataFromMultisig = async (account, currentBitcoinNetwork, gapLimit) => {
+  const { receiveAddresses, changeAddresses, unusedReceiveAddresses, unusedChangeAddresses, transactions } = await scanForAddressesAndTransactions(account, currentBitcoinNetwork, gapLimit)
   const availableUtxos = await getUtxosForAddresses(receiveAddresses.concat(changeAddresses), currentBitcoinNetwork);
   const organizedTransactions = serializeTransactions(transactions, receiveAddresses, changeAddresses);
 
   return [receiveAddresses, changeAddresses, organizedTransactions, unusedReceiveAddresses, unusedChangeAddresses, availableUtxos];
 }
 
-const getDataFromXPub = async (account, currentBitcoinNetwork) => {
-  const { receiveAddresses, changeAddresses, unusedReceiveAddresses, unusedChangeAddresses, transactions } = await scanForAddressesAndTransactions(account, currentBitcoinNetwork, 20)
+const getDataFromXPub = async (account, currentBitcoinNetwork, gapLimit) => {
+  const { receiveAddresses, changeAddresses, unusedReceiveAddresses, unusedChangeAddresses, transactions } = await scanForAddressesAndTransactions(account, currentBitcoinNetwork, gapLimit)
 
   const availableUtxos = await getUtxosForAddresses(receiveAddresses.concat(changeAddresses), currentBitcoinNetwork);
   const organizedTransactions = serializeTransactions(transactions, receiveAddresses, changeAddresses);

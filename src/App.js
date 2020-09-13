@@ -50,6 +50,9 @@ function App() {
   const [currentAccount, setCurrentAccount] = useState({ name: 'Loading...', loading: true });
   const [accountMap, setAccountMap] = useState(new Map());
   const [currentBitcoinNetwork, setCurrentBitcoinNetwork] = useState(networks.bitcoin);
+  const [legacyHwAccounts, setLegacyHwAccounts] = useState(false);
+  const [newAccountNum, setNewAccountNum] = useState(0);
+  const [gapLimit, setGapLimit] = useState(10);
   const [refresh, setRefresh] = useState(false);
   const [flyInAnimation, setInitialFlyInAnimation] = useState(true);
 
@@ -97,8 +100,11 @@ function App() {
 
   useEffect(() => {
     async function fetchBitcoinNetwork() {
-      const bitcoinNetwork = await window.ipcRenderer.invoke('/bitcoin-network');
-      setCurrentBitcoinNetwork(bitcoinNetwork);
+      const env = await window.ipcRenderer.invoke('/env');
+      setCurrentBitcoinNetwork(env.currentBitcoinNetwork);
+      setLegacyHwAccounts(env.legacyHwAccounts);
+      setNewAccountNum(env.newAccountNum)
+      setGapLimit(env.gapLimit);
     }
     fetchBitcoinNetwork();
   }, []);
@@ -194,7 +200,7 @@ function App() {
           <Route path="/vault/:id" component={() => <Vault config={config} setConfigFile={setConfigFile} toggleRefresh={toggleRefresh} currentAccount={currentAccount} setCurrentAccount={setCurrentAccountFromMap} currentBitcoinNetwork={currentBitcoinNetwork} currentBitcoinPrice={currentBitcoinPrice} />} />
           <Route path="/receive" component={() => <Receive config={config} currentAccount={currentAccount} setCurrentAccount={setCurrentAccountFromMap} currentBitcoinPrice={currentBitcoinPrice} />} />
           <Route path="/send" component={() => <Send config={config} currentAccount={currentAccount} setCurrentAccount={setCurrentAccountFromMap} toggleRefresh={toggleRefresh} currentBitcoinPrice={currentBitcoinPrice} currentBitcoinNetwork={currentBitcoinNetwork} />} />
-          <Route path="/setup" component={() => <Setup config={config} setConfigFile={setConfigFile} currentBitcoinNetwork={currentBitcoinNetwork} />} />
+          <Route path="/setup" component={() => <Setup config={config} setConfigFile={setConfigFile} currentBitcoinNetwork={currentBitcoinNetwork} legacyHwAccounts={legacyHwAccounts} newAccountNum={newAccountNum} />} />
           <Route path="/login" component={() => <Login setConfigFile={setConfigFile} currentBitcoinNetwork={currentBitcoinNetwork} />} />
           <Route path="/settings" component={() => <Settings config={config} currentBitcoinNetwork={currentBitcoinNetwork} changeCurrentBitcoinNetwork={changeCurrentBitcoinNetwork} />} />
           <Route path="/gdrive-import" component={() => <GDriveImport setConfigFile={setConfigFile} />} />

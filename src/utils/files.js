@@ -44,14 +44,14 @@ export const downloadFile = (file, filename) => {
   window.ipcRenderer.send('download-item', { url: fileUrl, filename: filename })
 }
 
-export const createSinglesigConfigFile = async (walletMnemonic, accountName, config, currentBitcoinNetwork) => {
+export const createSinglesigConfigFile = async (walletMnemonic, accountName, config, currentBitcoinNetwork, accountNum) => {
   const configCopy = { ...config };
   configCopy.isEmpty = false;
 
   // taken from BlueWallet so you can import and use on mobile
   const seed = await mnemonicToSeed(walletMnemonic);
   const root = bip32.fromSeed(seed, currentBitcoinNetwork);
-  const path = getP2wpkhDeriationPathForNetwork(currentBitcoinNetwork);
+  const path = getP2wpkhDeriationPathForNetwork(currentBitcoinNetwork, accountNum);
   const child = root.derivePath(path).neutered();
   const xpubString = child.toBase58();
   const xprvString = root.derivePath(path).toBase58();
@@ -62,6 +62,7 @@ export const createSinglesigConfigFile = async (walletMnemonic, accountName, con
     name: accountName,
     network: getUnchainedNetworkFromBjslibNetwork(currentBitcoinNetwork),
     addressType: "P2WPKH",
+    accountNum: accountNum,
     quorum: { requiredSigners: 1, totalSigners: 1 },
     xpub: xpubString,
     xprv: xprvString,
@@ -76,7 +77,7 @@ export const createSinglesigConfigFile = async (walletMnemonic, accountName, con
   return configCopy;
 }
 
-export const createSinglesigHWWConfigFile = async (device, accountName, config, currentBitcoinNetwork) => {
+export const createSinglesigHWWConfigFile = async (device, accountName, config, currentBitcoinNetwork, legacyHwAccounts, accountNum) => {
   const configCopy = { ...config };
   configCopy.isEmpty = false;
 
@@ -85,7 +86,8 @@ export const createSinglesigHWWConfigFile = async (device, accountName, config, 
     created_at: Date.now(),
     name: accountName,
     network: getUnchainedNetworkFromBjslibNetwork(currentBitcoinNetwork),
-    addressType: "P2PKH",
+    addressType: legacyHwAccounts ? "P2PKH" : "P2SH", //TODO P2SH or P2WPKH (orig?)
+    accountNum: accountNum,
     quorum: { requiredSigners: 1, totalSigners: 1 },
     xpub: device.xpub,
     parentFingerprint: device.fingerprint,
@@ -103,7 +105,7 @@ export const createSinglesigHWWConfigFile = async (device, accountName, config, 
   return configCopy;
 }
 
-export const createMultisigConfigFile = (importedDevices, requiredSigners, accountName, config, currentBitcoinNetwork) => {
+export const createMultisigConfigFile = (importedDevices, requiredSigners, accountName, config, currentBitcoinNetwork, accountNum) => {
   const configCopy = { ...config };
   configCopy.isEmpty = false;
 
@@ -129,6 +131,7 @@ export const createMultisigConfigFile = (importedDevices, requiredSigners, accou
     name: accountName,
     network: getUnchainedNetworkFromBjslibNetwork(currentBitcoinNetwork),
     addressType: "P2WSH",
+    accountNum: accountNum,
     quorum: {
       requiredSigners: requiredSigners,
       totalSigners: importedDevices.length
@@ -141,8 +144,8 @@ export const createMultisigConfigFile = (importedDevices, requiredSigners, accou
   return configCopy;
 }
 
-export const createColdCardBlob = (requiredSigners, totalSigners, accountName, importedDevices, currentBitcoinNetwork) => {
-  let derivationPath = getMultisigDeriationPathForNetwork(currentBitcoinNetwork);
+export const createColdCardBlob = (requiredSigners, totalSigners, accountName, importedDevices, currentBitcoinNetwork, accountNum) => {
+  let derivationPath = getMultisigDeriationPathForNetwork(currentBitcoinNetwork, accountNum);
   return new Blob([`# Coldcard Multisig setup file (created by Lily Wallet on ${moment(Date.now()).format('MM/DD/YYYY')})
 #
 Name: ${accountName}

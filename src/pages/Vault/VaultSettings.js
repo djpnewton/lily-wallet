@@ -20,7 +20,8 @@ const VaultSettings = ({ config, setConfigFile, currentAccount, setViewAddresses
   const history = useHistory();
 
   const downloadColdcardMultisigFile = () => {
-    const ccFile = createColdCardBlob(currentAccount.config.quorum.requiredSigners, currentAccount.config.quorum.totalSigners, currentAccount.config.name, currentAccount.config.extendedPublicKeys, currentBitcoinNetwork);
+    const accountNum = currentAccount.config.accountNum;
+    const ccFile = createColdCardBlob(currentAccount.config.quorum.requiredSigners, currentAccount.config.quorum.totalSigners, currentAccount.config.name, currentAccount.config.extendedPublicKeys, currentBitcoinNetwork, accountNum);
     downloadFile(ccFile, formatFilename(`${currentAccount.config.name}-lily-coldcard-file`, currentBitcoinNetwork, 'txt'));
   }
 
@@ -35,7 +36,8 @@ const VaultSettings = ({ config, setConfigFile, currentAccount, setViewAddresses
       // we need to populate the method field for caravan. if the device is of type trezor or ledger, put that in. else just put xpub.
       if (configCopy.extendedPublicKeys[i].device && (configCopy.extendedPublicKeys[i].device.type === 'trezor' || configCopy.extendedPublicKeys[i].device.type === 'ledger')) {
         configCopy.extendedPublicKeys[i].method = configCopy.extendedPublicKeys[i].device.type;
-        configCopy.extendedPublicKeys[i].bip32Path = getMultisigDeriationPathForNetwork(currentBitcoinNetwork);
+        const accountNum = configCopy.accountNum;
+        configCopy.extendedPublicKeys[i].bip32Path = getMultisigDeriationPathForNetwork(currentBitcoinNetwork, accountNum);
       } else {
         configCopy.extendedPublicKeys[i].method = 'xpub';
       }

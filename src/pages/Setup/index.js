@@ -25,7 +25,7 @@ const zpubToXpub = (zpub) => {
   return xpub
 }
 
-const Setup = ({ config, setConfigFile, currentBitcoinNetwork }) => {
+const Setup = ({ config, setConfigFile, currentBitcoinNetwork, legacyHwAccounts, newAccountNum }) => {
   const [setupOption, setSetupOption] = useState(0);
   const [step, setStep] = useState(0);
   const [accountName, setAccountName] = useState('');
@@ -47,7 +47,7 @@ const Setup = ({ config, setConfigFile, currentBitcoinNetwork }) => {
       const response = await window.ipcRenderer.invoke('/xpub', {
         deviceType: device.type,
         devicePath: device.path,
-        path: getMultisigDeriationPathForNetwork(currentBitcoinNetwork) // we are assuming BIP48 P2WSH wallet
+        path: getMultisigDeriationPathForNetwork(currentBitcoinNetwork, newAccountNum) // we are assuming BIP48 P2WSH wallet
       });
 
       setImportedDevices([...importedDevices, { ...device, ...response }]);
@@ -71,9 +71,10 @@ const Setup = ({ config, setConfigFile, currentBitcoinNetwork }) => {
       const response = await window.ipcRenderer.invoke('/xpub', {
         deviceType: device.type,
         devicePath: device.path,
-        //path: getP2shDeriationPathForNetwork(currentBitcoinNetwork) // we are assuming BIP48 P2WSH wallet
-        path: getP2pkhDeriationPathForNetwork(currentBitcoinNetwork) // we are assuming BIP44 P2PKH wallet
-    });
+        path: legacyHwAccounts ?
+          getP2pkhDeriationPathForNetwork(currentBitcoinNetwork, newAccountNum) : // we are assuming BIP44 P2PKH wallet
+          getP2shDeriationPathForNetwork(currentBitcoinNetwork, newAccountNum) // we are assuming BIP48 P2WSH wallet
+        });
 
       setImportedDevices([...importedDevices, { ...device, ...response }]);
       availableDevices.splice(index, 1);
@@ -139,9 +140,9 @@ const Setup = ({ config, setConfigFile, currentBitcoinNetwork }) => {
     const contentType = "text/plain;charset=utf-8;";
     let configObject;
     if (importedDevices.length) {
-      configObject = await createSinglesigHWWConfigFile(importedDevices[0], accountName, config, currentBitcoinNetwork)
+      configObject = await createSinglesigHWWConfigFile(importedDevices[0], accountName, config, currentBitcoinNetwork, legacyHwAccounts, newAccountNum)
     } else {
-      configObject = await createSinglesigConfigFile(walletMnemonic, accountName, config, currentBitcoinNetwork);
+      configObject = await createSinglesigConfigFile(walletMnemonic, accountName, config, currentBitcoinNetwork, newAccountNum);
     }
 
     const encryptedConfigObject = AES.encrypt(
