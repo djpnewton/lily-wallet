@@ -6,6 +6,7 @@ const BigNumber = require('bignumber.js');
 const { download } = require('electron-dl');
 
 const { enumerate, getXPub, signtx, promptpin, sendpin } = require('./server/commands');
+const { getAccountData } = require('./server/accounts');
 const { getDataFromMultisig, getDataFromXPub } = require('./utils/transactions');
 
 const path = require('path');
@@ -86,29 +87,7 @@ app.on('activate', function () {
 
 ipcMain.on('/account-data', async (event, args) => {
   const { config } = args;
-  let addresses, changeAddresses, transactions, unusedAddresses, unusedChangeAddresses, availableUtxos;
-
-  if (config.quorum.totalSigners > 1) {
-    [addresses, changeAddresses, transactions, unusedAddresses, unusedChangeAddresses, availableUtxos] = await getDataFromMultisig(config, currentBitcoinNetwork);
-  } else {
-    [addresses, changeAddresses, transactions, unusedAddresses, unusedChangeAddresses, availableUtxos] = await getDataFromXPub(config, currentBitcoinNetwork);
-  }
-
-  const currentBalance = availableUtxos.reduce((accum, utxo) => accum.plus(utxo.value), BigNumber(0));
-
-  const accountData = {
-    name: config.name,
-    config: config,
-    addresses,
-    changeAddresses,
-    availableUtxos,
-    transactions,
-    unusedAddresses,
-    currentBalance: currentBalance.toNumber(),
-    unusedChangeAddresses
-  };
-
-  event.reply('/account-data', accountData);
+  event.reply('/account-data', await getAccountData(config));
 });
 
 ipcMain.handle('/bitcoin-network', async (event, args) => {

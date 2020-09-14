@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { networks, Psbt } from 'bitcoinjs-lib';
 import { bip32 } from "bitcoinjs-lib";
 import { mnemonicToSeed } from "bip39";
+import { AES, enc } from 'crypto-js';
 
 import { bitcoinNetworkEqual, getMultisigDeriationPathForNetwork, getP2wpkhDeriationPathForNetwork } from './transactions';
 
@@ -153,4 +154,9 @@ ${importedDevices.map((device) => (
     `\n${device.fingerprint || device.parentFingerprint}: ${device.xpub}`
   ))}
 `], { type: 'text/plain' });
+}
+
+export const decryptConfigFile = (encryptedData, password) => {
+  const bytes = AES.decrypt(encryptedData, password);
+  return JSON.parse(bytes.toString(enc.Utf8));
 }

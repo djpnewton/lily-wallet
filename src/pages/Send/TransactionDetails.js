@@ -19,7 +19,7 @@ import { StyledIcon, Button, SidewaysShake, Dropdown, Modal } from '../../compon
 
 import { gray, blue, darkGray, white, darkOffWhite, green, darkGreen, lightGray, red, lightRed, orange, lightOrange, lightBlue, offWhite } from '../../utils/colors';
 import { downloadFile, formatFilename, combinePsbts } from '../../utils/files';
-import { createUtxoMapFromUtxoArray } from './utils';
+import { createUtxoMapFromUtxoArray, broadcastPsbt } from './utils';
 import { FeeSelector } from './FeeSelector';
 
 const ABSURD_FEE = 1000000; // 0.01 BTC
@@ -72,37 +72,25 @@ const TransactionDetails = ({
 
   const broadcastTransaction = async () => {
     if (signedDevices.length === signThreshold) {
-      try {
-        if (signThreshold > 1) {
-          const combinedPsbt = combinePsbts(finalPsbt, signedPsbts)
-
-          combinedPsbt.finalizeAllInputs();
-
-          const { data } = await axios.get(blockExplorerAPIURL(`/broadcast?tx=${combinedPsbt.extractTransaction().toHex()}`, getUnchainedNetworkFromBjslibNetwork(currentBitcoinNetwork)));
-          setBroadcastedTxId(data);
-          setModalIsOpen(true);
-          setModalContent(<TransactionSuccess broadcastedTxId={data} />);
-
+      let psbt;
+      if (signThreshold > 1) {
+        psbt = combinePsbts(finalPsbt, signedPsbts)
+        psbt.finalizeAllInputs();
+      } else {
+        if (typeof signedPsbts[0] === 'string') { // if hww signs, then signedPsbt[0] is a string and we need to turn it into a hex to broadcast
+          psbt = Psbt.fromBase64(signedPsbts[0]);
+          psbt.finalizeAllInputs();
         } else {
-          let broadcastPsbt;
-          if (typeof signedPsbts[0] === 'string') { // if hww signs, then signedPsbt[0] is a string and we need to turn it into a hex to broadcast
-            broadcastPsbt = Psbt.fromBase64(signedPsbts[0]);
-            broadcastPsbt.finalizeAllInputs();
-          } else {
-            broadcastPsbt = signedPsbts[0];
-          }
-
-          const { data } = await axios.get(blockExplorerAPIURL(`/broadcast?tx=${broadcastPsbt.extractTransaction().toHex()}`, getUnchainedNetworkFromBjslibNetwork(currentBitcoinNetwork)));
-          setBroadcastedTxId(data);
-          setModalIsOpen(true);
-          setModalContent(<TransactionSuccess broadcastedTxId={data} />);
+          psbt = signedPsbts[0];
         }
-      } catch (e) {
-        if (e.response) {
-          setTxError(e.response.data);
-        } else {
-          setTxError(e.message);
-        }
+      }
+      const { txid, errMsg } = await broadcastPsbt(psbt, currentBitcoinNetwork);
+      if (txid !== null) {
+        setBroadcastedTxId(txid);
+        setModalIsOpen(true);
+        setModalContent(<TransactionSuccess broadcastedTxId={txid} />);
+      } else {
+        setTxError(errMsg);
       }
     }
   }

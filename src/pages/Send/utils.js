@@ -6,7 +6,8 @@ import {
   blockExplorerAPIURL,
   estimateMultisigTransactionFee
 } from "unchained-bitcoin";
-import { Psbt, address, networks } from 'bitcoinjs-lib';
+import { Psbt, bip32, address, networks } from 'bitcoinjs-lib';
+import { mnemonicToSeed } from 'bip39';
 
 import BigNumber from 'bignumber.js';
 import coinSelect from 'coinselect';
@@ -190,4 +191,29 @@ export const createTransaction = async (currentAccount, amountInBitcoins, recipi
   }
 
   return { psbt, fee, feeRates }
+}
+
+export const singleSignPsbt = async (psbt, currentAccount, currentBitcoinNetwork) => {
+  const seed = await mnemonicToSeed(currentAccount.config.mnemonic);
+  const root = bip32.fromSeed(seed, currentBitcoinNetwork);
+
+  psbt.signAllInputsHD(root);
+  psbt.validateSignaturesOfAllInputs();
+  psbt.finalizeAllInputs();
+}
+
+export const broadcastPsbt = async (psbt, currentBitcoinNetwork) => {
+  let txid = null;
+  let errMsg = null;
+  try {
+    const { data } = await axios.get(blockExplorerAPIURL(`/broadcast?tx=${psbt.extractTransaction().toHex()}`, getUnchainedNetworkFromBjslibNetwork(currentBitcoinNetwork)));
+    txid = data;
+  } catch (e) {
+    if (e.response) {
+      errMsg = e.response.data;
+    } else {
+      errMsg = e.message;
+    }
+  }
+  return { txid, errMsg };
 }

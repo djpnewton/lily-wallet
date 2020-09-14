@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useHistory } from "react-router-dom";
 import styled, { keyframes } from 'styled-components';
-import { AES, enc } from 'crypto-js';
 
 import { Button, VaultIcon } from '../components';
 import { black, gray, darkOffWhite, lightGray, darkGray, lightBlue, white, red } from '../utils/colors';
+import { decryptConfigFile } from '../utils/files';
 
 import { getConfigFileFromGoogleDrive } from '../utils/google-drive';
 
@@ -42,8 +42,7 @@ const GDriveImport = ({ encryptedConfig, setConfigFile }) => {
   const unlockFile = () => {
     // KBC-TODO: probably need error handling for wrong password
     try {
-      const bytes = AES.decrypt(encryptedConfigFile, password);
-      const decryptedData = JSON.parse(bytes.toString(enc.Utf8));
+      const decryptedData = decryptConfigFile(encryptedConfigFile, password);
       setLoading(true);
       setTimeout(() => setShowCurtain(true), 500);
       setTimeout(() => setStartCurtain(true), 550);

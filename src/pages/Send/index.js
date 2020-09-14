@@ -3,10 +3,9 @@ import styled, { css } from 'styled-components';
 import { Safe } from '@styled-icons/crypto';
 import { Wallet } from '@styled-icons/entypo';
 import BigNumber from 'bignumber.js';
-import { mnemonicToSeed } from 'bip39';
 import { satoshisToBitcoins } from "unchained-bitcoin";
 
-import { Psbt, bip32, networks } from 'bitcoinjs-lib';
+import { Psbt, networks } from 'bitcoinjs-lib';
 
 import { StyledIcon, Button, PageWrapper, GridArea, PageTitle, Header, HeaderRight, HeaderLeft, Loading, FileUploader, Modal, Dropdown } from '../../components';
 import RecentTransactions from '../../components/transactions/RecentTransactions';
@@ -20,7 +19,7 @@ import { cloneBuffer, bufferToHex } from '../../utils/other';
 import { combinePsbts } from '../../utils/files';
 import { bitcoinNetworkEqual } from '../../utils/transactions';
 
-import { createTransaction, validateAddress, createUtxoMapFromUtxoArray, getFee } from './utils'
+import { createTransaction, singleSignPsbt, validateAddress, createUtxoMapFromUtxoArray, getFee } from './utils'
 import { AddressDisplayWrapper, Input, InputStaticText } from './styles';
 
 const Send = ({ config, currentAccount, setCurrentAccount, toggleRefresh, currentBitcoinNetwork, currentBitcoinPrice }) => {
@@ -58,12 +57,7 @@ const Send = ({ config, currentAccount, setCurrentAccount, toggleRefresh, curren
   const signTransactionIfSingleSigner = async (psbt) => {
     // if only single sign, then sign tx right away
     if (currentAccount.config.mnemonic) {
-      const seed = await mnemonicToSeed(currentAccount.config.mnemonic);
-      const root = bip32.fromSeed(seed, currentBitcoinNetwork);
-
-      psbt.signAllInputsHD(root);
-      psbt.validateSignaturesOfAllInputs();
-      psbt.finalizeAllInputs();
+      await singleSignPsbt(psbt, currentAccount, currentBitcoinNetwork);
 
       setSignedDevices([currentAccount]) // this could probably have better information in it but
       setSignedPsbts([psbt]);
