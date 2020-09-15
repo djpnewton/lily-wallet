@@ -4,10 +4,10 @@ import styled from 'styled-components';
 import bs58check from 'bs58check';
 import { generateMnemonic } from "bip39";
 
-import { createMultisigConfigFile, createSinglesigConfigFile, createSinglesigHWWConfigFile, createColdCardBlob, downloadFile, formatFilename } from '../../utils/files';
+import { createColdCardBlob, downloadFile, formatFilename } from '../../utils/files';
 import { black } from '../../utils/colors';
 import { getMultisigDeriationPathForNetwork, getP2shDeriationPathForNetwork } from '../../utils/transactions';
-import { encryptConfig } from '../../wallet/config';
+import { createSinglesigConfig, createSinglesigHWWConfig, createMultisigConfig, encryptConfig } from '../../wallet/config';
 
 import StepGroups from './Steps';
 import PageHeader from './PageHeader';
@@ -138,9 +138,9 @@ const Setup = ({ config, setConfigFile, currentBitcoinNetwork }) => {
     const contentType = "text/plain;charset=utf-8;";
     let configObject;
     if (importedDevices.length) {
-      configObject = await createSinglesigHWWConfigFile(importedDevices[0], accountName, config, currentBitcoinNetwork)
+      configObject = await createSinglesigHWWConfig(importedDevices[0], accountName, config, currentBitcoinNetwork)
     } else {
-      configObject = await createSinglesigConfigFile(walletMnemonic, accountName, config, currentBitcoinNetwork);
+      configObject = await createSinglesigConfig(walletMnemonic, accountName, config, currentBitcoinNetwork);
     }
 
     const encryptedConfigObject = encryptConfig(configObject, password);
@@ -161,7 +161,7 @@ const Setup = ({ config, setConfigFile, currentBitcoinNetwork }) => {
     const contentType = "text/plain;charset=utf-8;";
 
     const ccFile = createColdCardBlob(configRequiredSigners, importedDevices.length, accountName, importedDevices, currentBitcoinNetwork);
-    const configObject = createMultisigConfigFile(importedDevices, configRequiredSigners, accountName, config, currentBitcoinNetwork);
+    const configObject = createMultisigConfig(importedDevices, configRequiredSigners, accountName, config, currentBitcoinNetwork);
     const encryptedConfigObject = encryptConfig(configObject, password);
     const encryptedConfigFile = new Blob([decodeURIComponent(encodeURI(encryptedConfigObject))], { type: contentType });
 
