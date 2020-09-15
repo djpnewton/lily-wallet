@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { networks, Psbt } from 'bitcoinjs-lib';
 import { bip32 } from "bitcoinjs-lib";
 import { mnemonicToSeed } from "bip39";
-import { AES, enc } from 'crypto-js';
 
 import { bitcoinNetworkEqual, getMultisigDeriationPathForNetwork, getP2wpkhDeriationPathForNetwork } from './transactions';
 
@@ -13,22 +12,6 @@ export const getUnchainedNetworkFromBjslibNetwork = (bitcoinJslibNetwork) => {
   } else {
     return 'testnet';
   }
-}
-
-// TODO: move this somewhere more logical
-export const combinePsbts = (finalPsbt, signedPsbts) => {
-  const psbt = finalPsbt;
-  const base64SignedPsbts = signedPsbts.map((psbt) => {
-    if (typeof psbt === 'object') {
-      return psbt;
-    } else {
-      return Psbt.fromBase64(psbt);
-    }
-  })
-  if (base64SignedPsbts.length) { // if there are signed psbts, combine them
-    psbt.combine(...base64SignedPsbts);
-  }
-  return psbt;
 }
 
 export const formatFilename = (fileContents, currentBitcoinNetwork, fileType) => {
@@ -154,9 +137,4 @@ ${importedDevices.map((device) => (
     `\n${device.fingerprint || device.parentFingerprint}: ${device.xpub}`
   ))}
 `], { type: 'text/plain' });
-}
-
-export const decryptConfigFile = (encryptedData, password) => {
-  const bytes = AES.decrypt(encryptedData, password);
-  return JSON.parse(bytes.toString(enc.Utf8));
 }

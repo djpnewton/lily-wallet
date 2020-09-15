@@ -16,10 +16,9 @@ import TransactionDetails from './TransactionDetails';
 import { red, gray, blue, darkGray, white, darkOffWhite, lightGray, lightBlue } from '../../utils/colors';
 import { mobile } from '../../utils/media';
 import { cloneBuffer, bufferToHex } from '../../utils/other';
-import { combinePsbts } from '../../utils/files';
 import { bitcoinNetworkEqual } from '../../utils/transactions';
+import { createTransaction, singleSignPsbt, validateAddress, createUtxoMapFromUtxoArray, getFee, combinePsbts } from '../../wallet/utils'
 
-import { createTransaction, singleSignPsbt, validateAddress, createUtxoMapFromUtxoArray, getFee } from './utils'
 import { AddressDisplayWrapper, Input, InputStaticText } from './styles';
 
 const Send = ({ config, currentAccount, setCurrentAccount, toggleRefresh, currentBitcoinNetwork, currentBitcoinPrice }) => {

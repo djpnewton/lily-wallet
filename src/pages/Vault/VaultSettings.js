@@ -1,6 +1,5 @@
 import React, { useState, Fragment } from 'react';
 import styled, { css } from 'styled-components';
-import { AES } from 'crypto-js';
 import { useHistory } from "react-router-dom";
 import { QRCode } from "react-qr-svg";
 
@@ -10,6 +9,7 @@ import { black, gray, white, blue, darkGray, darkOffWhite, lightBlue, red, light
 import { mobile } from '../../utils/media';
 import { createColdCardBlob, downloadFile, formatFilename } from '../../utils/files';
 import { getMultisigDeriationPathForNetwork } from '../../utils/transactions';
+import { encryptConfig } from '../../wallet/config';
 
 const VaultSettings = ({ config, setConfigFile, currentAccount, setViewAddresses, setViewUtxos, currentBitcoinNetwork }) => {
   const [viewXpub, setViewXpub] = useState(false);
@@ -95,7 +95,7 @@ const VaultSettings = ({ config, setConfigFile, currentAccount, setViewAddresses
       configCopy.vaults = configCopy.vaults.filter((vault) => vault.id !== currentAccount.config.id)
     }
 
-    const encryptedConfigObject = AES.encrypt(JSON.stringify(configCopy), configEncryptionPassword).toString();
+    const encryptedConfigObject = encryptConfig(configCopy, configEncryptionPassword);
     const encryptedConfigFile = new Blob([decodeURIComponent(encodeURI(encryptedConfigObject))], { type: contentType });
 
     downloadFile(encryptedConfigFile, formatFilename('lily_wallet_config', currentBitcoinNetwork, 'txt'));

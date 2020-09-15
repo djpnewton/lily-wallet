@@ -4,7 +4,7 @@ import styled, { keyframes } from 'styled-components';
 
 import { Button, VaultIcon } from '../components';
 import { black, gray, darkOffWhite, lightGray, darkGray, lightBlue, white, red } from '../utils/colors';
-import { decryptConfigFile } from '../utils/files';
+import { decryptConfig } from '../wallet/config';
 
 import { getConfigFileFromGoogleDrive } from '../utils/google-drive';
 
@@ -42,7 +42,7 @@ const GDriveImport = ({ encryptedConfig, setConfigFile }) => {
   const unlockFile = () => {
     // KBC-TODO: probably need error handling for wrong password
     try {
-      const decryptedData = decryptConfigFile(encryptedConfigFile, password);
+      const decryptedData = decryptConfig(encryptedConfigFile, password);
       setLoading(true);
       setTimeout(() => setShowCurtain(true), 500);
       setTimeout(() => setStartCurtain(true), 550);

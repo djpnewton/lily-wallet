@@ -9,9 +9,10 @@ import { satoshisToBitcoins, bitcoinsToSatoshis } from "unchained-bitcoin";
 const { getAccountData } = require('./server/accounts');
 const { enumerate, getXPub, signtx, promptpin, sendpin } = require('./server/commands');
 const { getDataFromMultisig, getDataFromXPub } = require('./utils/transactions');
-const { getUnchainedNetworkFromBjslibNetwork, decryptConfigFile } = require('./utils/files');
+const { getUnchainedNetworkFromBjslibNetwork } = require('./utils/files');
 
-import { createTransaction, singleSignPsbt, broadcastPsbt, validateAddress, createUtxoMapFromUtxoArray, getFee } from './pages/Send/utils'
+const { decryptConfig } = require('./wallet/config');
+const { createTransaction, singleSignPsbt, broadcastPsbt, validateAddress, createUtxoMapFromUtxoArray, getFee } = require('./wallet/utils');
 
 const options = yargs
   .command('show', 'Show wallet file', function (yargs) {
@@ -55,7 +56,7 @@ fs.readFile(options.filename, 'utf8', function (err, data) {
     if (err) {
       return console.error(err);
     }
-    const configFile = (decryptConfigFile(data, result.password));
+    const configFile = (decryptConfig(data, result.password));
     switch (options._[0]) {
       case 'show':
         if (options.verbose) {

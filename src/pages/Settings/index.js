@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import styled, { css } from 'styled-components';
-import { AES } from 'crypto-js';
 import Modal from 'react-modal';
 
 import { PageWrapper, PageTitle, Header, HeaderLeft, Button } from '../../components';
 
 import { blue, darkGray, white, lightBlue, darkOffWhite, lightGray, gray } from '../../utils/colors';
 import { downloadFile, formatFilename } from '../../utils/files';
+import { encryptConfig } from '../../wallet/config';
 import { mobile } from '../../utils/media';
 
 const modalStyles = {
@@ -36,7 +36,7 @@ const Settings = ({ config, currentBitcoinNetwork }) => {
 
   const downloadCurrentConfig = (password) => {
     const contentType = "text/plain;charset=utf-8;";
-    const encryptedConfigObject = AES.encrypt(JSON.stringify(config), password).toString();
+    const encryptedConfigObject = encryptConfig(config, password);
     var encryptedConfigFile = new Blob([decodeURIComponent(encodeURI(encryptedConfigObject))], { type: contentType });
     downloadFile(encryptedConfigFile, formatFilename('lily_wallet_config', currentBitcoinNetwork, 'txt'));
   }

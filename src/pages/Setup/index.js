@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { AES } from 'crypto-js';
 
 import bs58check from 'bs58check';
 import { generateMnemonic } from "bip39";
@@ -8,6 +7,7 @@ import { generateMnemonic } from "bip39";
 import { createMultisigConfigFile, createSinglesigConfigFile, createSinglesigHWWConfigFile, createColdCardBlob, downloadFile, formatFilename } from '../../utils/files';
 import { black } from '../../utils/colors';
 import { getMultisigDeriationPathForNetwork, getP2shDeriationPathForNetwork } from '../../utils/transactions';
+import { encryptConfig } from '../../wallet/config';
 
 import StepGroups from './Steps';
 import PageHeader from './PageHeader';
@@ -143,10 +143,7 @@ const Setup = ({ config, setConfigFile, currentBitcoinNetwork }) => {
       configObject = await createSinglesigConfigFile(walletMnemonic, accountName, config, currentBitcoinNetwork);
     }
 
-    const encryptedConfigObject = AES.encrypt(
-      JSON.stringify(configObject),
-      password
-    ).toString();
+    const encryptedConfigObject = encryptConfig(configObject, password);
 
     const encryptedConfigFile = new Blob(
       [decodeURIComponent(encodeURI(encryptedConfigObject))],
@@ -165,7 +162,7 @@ const Setup = ({ config, setConfigFile, currentBitcoinNetwork }) => {
 
     const ccFile = createColdCardBlob(configRequiredSigners, importedDevices.length, accountName, importedDevices, currentBitcoinNetwork);
     const configObject = createMultisigConfigFile(importedDevices, configRequiredSigners, accountName, config, currentBitcoinNetwork);
-    const encryptedConfigObject = AES.encrypt(JSON.stringify(configObject), password).toString();
+    const encryptedConfigObject = encryptConfig(configObject, password);
     const encryptedConfigFile = new Blob([decodeURIComponent(encodeURI(encryptedConfigObject))], { type: contentType });
 
     downloadFile(ccFile, formatFilename(`${accountName}-lily-coldcard-file`, currentBitcoinNetwork, 'txt'));

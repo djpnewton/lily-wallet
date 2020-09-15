@@ -1,12 +1,10 @@
 import React, { useState, Fragment } from 'react';
 import styled from 'styled-components';
-import axios from 'axios';
 import { ArrowIosForwardOutline } from '@styled-icons/evaicons-outline';
 import { CheckCircle } from '@styled-icons/material';
 import { useHistory } from "react-router-dom";
 
 import {
-  blockExplorerAPIURL,
   blockExplorerTransactionURL,
   satoshisToBitcoins
 } from "unchained-bitcoin";
@@ -18,8 +16,8 @@ import { bitcoinNetworkEqual } from '../../utils/transactions';
 import { StyledIcon, Button, SidewaysShake, Dropdown, Modal } from '../../components';
 
 import { gray, blue, darkGray, white, darkOffWhite, green, darkGreen, lightGray, red, lightRed, orange, lightOrange, lightBlue, offWhite } from '../../utils/colors';
-import { downloadFile, formatFilename, combinePsbts } from '../../utils/files';
-import { createUtxoMapFromUtxoArray, broadcastPsbt } from './utils';
+import { downloadFile, formatFilename } from '../../utils/files';
+import { createUtxoMapFromUtxoArray, broadcastPsbt, combinePsbts } from '../../wallet/utils';
 import { FeeSelector } from './FeeSelector';
 
 const ABSURD_FEE = 1000000; // 0.01 BTC

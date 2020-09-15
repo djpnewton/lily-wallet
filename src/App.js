@@ -14,6 +14,7 @@ import { networks } from 'bitcoinjs-lib';
 import { offWhite } from './utils/colors';
 import { mobile } from './utils/media';
 import { bitcoinNetworkEqual } from './utils/transactions';
+import { emptyConfig } from './wallet/config';
 
 import { Sidebar, MobileNavbar, ErrorBoundary } from './components';
 
@@ -27,19 +28,6 @@ import Receive from './pages/Receive';
 import Send from './pages/Send';
 import ColdcardImportInstructions from './pages/ColdcardImportInstructions';
 import Home from './pages/Home';
-
-const emptyConfig = {
-  name: "",
-  version: "0.0.2",
-  isEmpty: true,
-  backup_options: {
-    gDrive: false
-  },
-  wallets: [],
-  vaults: [],
-  keys: [],
-  exchanges: []
-}
 
 function App() {
   const [currentBitcoinPrice, setCurrentBitcoinPrice] = useState(BigNumber(0));

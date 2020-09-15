@@ -12,8 +12,8 @@ import { mnemonicToSeed } from 'bip39';
 import BigNumber from 'bignumber.js';
 import coinSelect from 'coinselect';
 
-import { cloneBuffer } from '../../utils/other';
-import { bitcoinNetworkEqual } from '../../utils/transactions';
+import { cloneBuffer } from '../utils/other';
+import { bitcoinNetworkEqual } from '../utils/transactions';
 
 const getTxHex = async (txid, currentBitcoinNetwork) => {
   const txHex = await (await axios.get(blockExplorerAPIURL(`/tx/${txid}/hex`, getUnchainedNetworkFromBjslibNetwork(currentBitcoinNetwork)))).data;
@@ -216,4 +216,19 @@ export const broadcastPsbt = async (psbt, currentBitcoinNetwork) => {
     }
   }
   return { txid, errMsg };
+}
+
+export const combinePsbts = (finalPsbt, signedPsbts) => {
+  const psbt = finalPsbt;
+  const base64SignedPsbts = signedPsbts.map((psbt) => {
+    if (typeof psbt === 'object') {
+      return psbt;
+    } else {
+      return Psbt.fromBase64(psbt);
+    }
+  })
+  if (base64SignedPsbts.length) { // if there are signed psbts, combine them
+    psbt.combine(...base64SignedPsbts);
+  }
+  return psbt;
 }

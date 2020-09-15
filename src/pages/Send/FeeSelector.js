@@ -8,7 +8,7 @@ import BigNumber from 'bignumber.js';
 import coinSelect from 'coinselect';
 
 import { Button } from '../../components';
-import { getFeeForMultisig } from './utils';
+import { getFeeForMultisig } from '../../wallet/utils';
 import { AddressDisplayWrapper, Input, InputStaticText } from './styles';
 
 import { gray, blue, darkGray, lightGray, lightBlue, offWhite } from '../../utils/colors';
