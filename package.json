@@ -79,7 +79,6 @@
     "cors": "^2.8.5",
     "crypto-js": "^4.0.0",
     "electron-dl": "^3.0.0",
-    "esm": "^3.2.25",
     "moment": "^2.24.0",
     "polished": "^3.5.1",
     "react": "^16.13.1",
@@ -114,7 +113,8 @@
     "electron-installer-dmg": "^3.0.0",
     "electron-packager": "^14.2.1",
     "electron-winstaller": "^4.0.0",
-    "prompt": "^1.0.0",
+    "enquirer": "^2.3.6",
+    "esm": "^3.2.25",
     "react-app-rewired": "^2.1.6",
     "yargs": "^16.0.3"
   }

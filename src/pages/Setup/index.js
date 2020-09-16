@@ -2,12 +2,11 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 
 import bs58check from 'bs58check';
-import { generateMnemonic } from "bip39";
 
 import { createColdCardBlob, downloadFile, formatFilename } from '../../utils/files';
 import { black } from '../../utils/colors';
 import { getMultisigDeriationPathForNetwork, getP2shDeriationPathForNetwork } from '../../utils/transactions';
-import { createSinglesigConfig, createSinglesigHWWConfig, createMultisigConfig, encryptConfig } from '../../wallet/config';
+import { newMnemonic, createSinglesigConfig, createSinglesigHWWConfig, createMultisigConfig, encryptConfig } from '../../wallet/config';
 
 import StepGroups from './Steps';
 import PageHeader from './PageHeader';
@@ -37,7 +36,7 @@ const Setup = ({ config, setConfigFile, currentBitcoinNetwork }) => {
   const [configRequiredSigners, setConfigRequiredSigners] = useState(1);
 
   useEffect(() => {
-    setWalletMnemonic(generateMnemonic(256));
+    setWalletMnemonic(newMnemonic());
   }, []);
 
   document.title = `Create Files - Lily Wallet`;

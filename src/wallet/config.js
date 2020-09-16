@@ -1,7 +1,7 @@
 import { AES, enc } from 'crypto-js';
 import { v4 as uuidv4 } from 'uuid';
 import { bip32 } from "bitcoinjs-lib";
-import { mnemonicToSeed } from "bip39";
+import { generateMnemonic, mnemonicToSeed } from "bip39";
 
 import { getUnchainedNetworkFromBjslibNetwork, getP2wpkhDeriationPathForNetwork } from '../utils/transactions';
 
@@ -16,6 +16,10 @@ export const emptyConfig = {
   vaults: [],
   keys: [],
   exchanges: []
+}
+
+export const newMnemonic = () => {
+    return generateMnemonic(256);
 }
 
 export const createSinglesigConfig = async (walletMnemonic, accountName, config, currentBitcoinNetwork) => {
