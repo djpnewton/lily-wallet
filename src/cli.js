@@ -4,14 +4,17 @@ const fs = require('fs');
 const yargs = require('yargs');
 const { prompt } = require('enquirer');
 const { networks } = require('bitcoinjs-lib');
-import { satoshisToBitcoins, bitcoinsToSatoshis } from "unchained-bitcoin";
+const { satoshisToBitcoins, bitcoinsToSatoshis } = require("unchained-bitcoin");
 
-const { getAccountData } = require('./server/accounts');
-const { enumerate, getXPub, signtx, promptpin, sendpin } = require('./server/commands');
-const { getUnchainedNetworkFromBjslibNetwork, getDataFromMultisig, getDataFromXPub } = require('./utils/transactions');
+const { devEnum, devXpub } = require('./server/device');
+const { getUnchainedNetworkFromBjslibNetwork, getP2shDeriationPathForNetwork } = require('./utils/transactions');
 
-const { emptyConfig, newMnemonic, createSinglesigConfig, encryptConfig, decryptConfig } = require('./wallet/config');
-const { createTransaction, singleSignPsbt, broadcastPsbt, validateAddress, createUtxoMapFromUtxoArray, getFee } = require('./wallet/utils');
+const { emptyConfig, newMnemonic, createSinglesigConfig, encryptConfig, decryptConfig, createSinglesigHWWConfig } = require('./wallet/config');
+const { createTransaction, singleSignPsbt, broadcastPsbt, validateAddress, getAccountData } = require('./wallet/utils');
+const { newDevice } = require('./wallet/device');
+
+const WT_SINGLE = 'single';
+const WT_HARDWARE = 'hardware';
 
 const formatAddresses = (addrs) => {
   let res = '';
@@ -41,6 +44,25 @@ const readConfigIfExists = async (filename) => {
   } catch(err) {
     console.error(err);
     return null;
+  }
+}
+
+const enumerate = async (options) => {
+  for (const device of await devEnum()) {
+    console.dir(device);
+  }
+}
+
+const xpub = async (options) => {
+  for (const device of await devEnum()) {
+    if (device.fingerprint == options.fingerprint) {
+      console.dir(await devXpub(
+        device.type,
+        device.path,
+        getP2shDeriationPathForNetwork(options.bitcoinNetwork) //TODO: wrap with something like SingleSigDeviceDerivationPath()???
+        ));
+      break;
+    }
   }
 }
 
@@ -76,7 +98,27 @@ const create = async (options) => {
     console.error('password confirmation does not match');
     return;
   }
-  config = await createSinglesigConfig(newMnemonic(), options.walletname, config, options.bitcoinNetwork);
+  if (options.wallettype == WT_SINGLE) {
+    config = await createSinglesigConfig(newMnemonic(), options.walletname, config, options.bitcoinNetwork);
+  } else if (options.wallettype == WT_HARDWARE) {
+    let foundDevice = null;
+    for (const device of await devEnum()) {
+      if (device.fingerprint == options.fingerprint) {
+        foundDevice = device;
+        break;
+      }
+    }
+    if (foundDevice) {
+      const { xpub } = await devXpub(foundDevice.type, foundDevice.path,
+        getP2shDeriationPathForNetwork(options.bitcoinNetwork) //TODO: wrap with something like SingleSigDeviceDerivationPath()???
+      );
+      const importedDevice = newDevice(foundDevice.type, foundDevice.model, foundDevice.path, foundDevice.fingerprint, xpub);
+      config = await createSinglesigHWWConfig(importedDevice, options.walletname, config, options.bitcoinNetwork);
+    } else {
+      console.error('device not found');
+      return;
+    }
+  }
   let configEncrypted = encryptConfig(config, response.password);
   let filename = options.filename;
   let count = 1;
@@ -182,73 +224,24 @@ const spend = async (options) => {
   }
 }
 
-/*
-ipcMain.handle('/enumerate', async (event, args) => {
-  const resp = JSON.parse(await enumerate());
-  if (resp.error) {
-    return Promise.reject(new Error('Error enumerating hardware wallets'))
-  }
-  const filteredDevices = resp.filter((device) => {
-    return device.type === 'coldcard' || device.type === 'ledger' || device.type === 'trezor';
-  })
-  return Promise.resolve(filteredDevices);
-});
-*/
-
-/*
-ipcMain.handle('/xpub', async (event, args) => {
-  const { deviceType, devicePath, path } = args;
-  const resp = JSON.parse(await getXPub(deviceType, devicePath, path)); // responses come back as strings, need to be parsed
-  if (resp.error) {
-    return Promise.reject(new Error('Error extracting xpub'));
-  }
-  return Promise.resolve(resp);
-});
-*/
-
-/*
-ipcMain.handle('/sign', async (event, args) => {
-  const { deviceType, devicePath, psbt } = args;
-  const resp = JSON.parse(await signtx(deviceType, devicePath, psbt));
-  if (resp.error) {
-    return Promise.reject(new Error('Error signing transaction'));
-  }
-  return Promise.resolve(resp);
-});
-*/
-
-/*
-ipcMain.handle('/promptpin', async (event, args) => {
-  const { deviceType, devicePath } = args;
-  const resp = JSON.parse(await promptpin(deviceType, devicePath));
-  if (resp.error) {
-    return Promise.reject(new Error('Error prompting pin'));
-  }
-  return Promise.resolve(resp);
-});
-*/
-
-/*
-ipcMain.handle('/sendpin', async (event, args) => {
-  const { deviceType, devicePath, pin } = args;
-  const resp = JSON.parse(await sendpin(deviceType, devicePath, pin));
-  if (resp.error) {
-    return Promise.reject(new Error('Error sending pin'));
-  }
-  return Promise.resolve(resp);
-});
-*/
-
 function main() {
+  const ENUM = 'enumerate';
+  const XPUB = 'xpub';
   const CREATE = 'create';
   const SHOW = 'show';
   const BALANCE = 'balance';
   const ADDRESSES = 'addresses';
   const SPEND = 'spend';
-  
+
   const options = yargs
+    .command(ENUM, 'Enumerate hardware devices')
+    .command(XPUB, 'Get device xpub', function (yargs) {
+      return yargs.option('F', { alias: 'fingerprint', describe: 'Device fingerprint', type: 'string', demandOption: true });
+    })
     .command(CREATE, 'Create wallet file', function (yargs) {
-      return yargs.option('f', { alias: 'filename', describe: 'Config filename', type: 'string', demandOption: true });
+      return yargs.option('f', { alias: 'filename', describe: 'Config filename', type: 'string', demandOption: true })
+                  .option('w', { alias: 'wallettype', describe: `Wallet type (${WT_SINGLE}, ${WT_HARDWARE})`, type: 'string', demandOption: true })
+                  .option('F', { alias: 'fingerprint', describe: 'Device fingerprint', type: 'string' })
     })
     .command(SHOW, 'Show wallet file', function (yargs) {
       return yargs.option('f', { alias: 'filename', describe: 'Config filename', type: 'string', demandOption: true })
@@ -274,9 +267,15 @@ function main() {
   options.bitcoinNetwork = options.testnet ? networks.testnet : networks.bitcoin;
   
   console.log(`:: network: ${getUnchainedNetworkFromBjslibNetwork(options.bitcoinNetwork)}`);
-  console.log(`:: filename: ${options.filename}`);
-  
+  console.log();
+
   switch (options._[0]) {
+    case ENUM:
+      enumerate(options);
+      break;
+    case XPUB:
+      xpub(options);
+      break;
     case CREATE:
       create(options);
       break;

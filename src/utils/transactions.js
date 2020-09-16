@@ -7,6 +7,7 @@ const {
   generateMultisigFromPublicKeys,
 } = require("unchained-bitcoin");
 
+const { ADDR_TYPE_MULTISIG, ADDR_TYPE_P2SH, ADDR_TYPE_P2WPKH } = require('../wallet/types.js');
 
 const bitcoinNetworkEqual = (a, b) => {
   return a.bech32 === b.bech32;
@@ -14,12 +15,14 @@ const bitcoinNetworkEqual = (a, b) => {
 
 const getDerivationPath = (addressType, bip32Path, currentBitcoinNetwork) => {
   const childPubKeysBip32Path = bip32Path;
-  if (addressType === 'multisig') {
+  if (addressType === ADDR_TYPE_MULTISIG) {
     return `${getMultisigDeriationPathForNetwork(currentBitcoinNetwork)}/${childPubKeysBip32Path.replace('m/', '')}`;
-  } else if (addressType === 'p2sh') {
+  } else if (addressType === ADDR_TYPE_P2SH) {
     return `${getP2shDeriationPathForNetwork(currentBitcoinNetwork)}/${childPubKeysBip32Path.replace('m/', '')}`;
-  } else { // p2wpkh
+  } else if (addressType === ADDR_TYPE_P2WPKH) {
     return `${getP2wpkhDeriationPathForNetwork(currentBitcoinNetwork)}/${childPubKeysBip32Path.replace('m/', '')}`;
+  } else {
+    throw new Error('unknown derivation path');
   }
 }
 
@@ -172,7 +175,7 @@ const getUtxosForAddresses = async (addresses, currentBitcoinNetwork) => {
 
 const getAddressFromPubKey = (childPubKey, addressType, currentBitcoinNetwork) => {
   let address;
-  if (addressType === 'p2sh') {
+  if (addressType === ADDR_TYPE_P2SH) {
     address = payments.p2sh({
       redeem: payments.p2wpkh({ pubkey: Buffer.from(childPubKey.childPubKey, 'hex'), network: currentBitcoinNetwork }),
       network: currentBitcoinNetwork
@@ -192,16 +195,16 @@ const getTransactionsFromAddress = async (address, currentBitcoinNetwork) => {
 const getAddressFromAccount = (account, path, currentBitcoinNetwork) => {
   if (account.quorum.totalSigners > 1) { // multisig
     const childPubKeys = account.extendedPublicKeys.map((extendedPublicKey) => {
-      return getChildPubKeyFromXpub(extendedPublicKey, path, 'multisig', currentBitcoinNetwork)
+      return getChildPubKeyFromXpub(extendedPublicKey, path, ADDR_TYPE_MULTISIG, currentBitcoinNetwork)
     })
     return getMultisigAddressFromPubKeys(childPubKeys, account, currentBitcoinNetwork)
   } else { // single sig
     if (account.device) {
-      const receivePubKey = getChildPubKeyFromXpub(account, path, 'p2sh', currentBitcoinNetwork);
-      return getAddressFromPubKey(receivePubKey, 'p2sh', currentBitcoinNetwork);
+      const receivePubKey = getChildPubKeyFromXpub(account, path, ADDR_TYPE_P2SH, currentBitcoinNetwork);
+      return getAddressFromPubKey(receivePubKey, ADDR_TYPE_P2SH, currentBitcoinNetwork);
     } else {
-      const receivePubKey = getChildPubKeyFromXpub(account, path, 'p2wpkh', currentBitcoinNetwork);
-      return getAddressFromPubKey(receivePubKey, 'p2wpkh', currentBitcoinNetwork);
+      const receivePubKey = getChildPubKeyFromXpub(account, path, ADDR_TYPE_P2WPKH, currentBitcoinNetwork);
+      return getAddressFromPubKey(receivePubKey, ADDR_TYPE_P2WPKH, currentBitcoinNetwork);
     }
   }
 }
@@ -273,6 +276,7 @@ module.exports = {
   getMultisigDeriationPathForNetwork: getMultisigDeriationPathForNetwork,
   getP2shDeriationPathForNetwork: getP2shDeriationPathForNetwork,
   getP2wpkhDeriationPathForNetwork: getP2wpkhDeriationPathForNetwork,
+  createAddressMapFromAddressArray: createAddressMapFromAddressArray,
   createAddressMapFromAddressArray: createAddressMapFromAddressArray,
   getDataFromMultisig: getDataFromMultisig,
   getDataFromXPub: getDataFromXPub,

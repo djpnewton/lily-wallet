@@ -13,7 +13,7 @@ import BigNumber from 'bignumber.js';
 import coinSelect from 'coinselect';
 
 import { cloneBuffer } from '../utils/other';
-import { bitcoinNetworkEqual } from '../utils/transactions';
+import { bitcoinNetworkEqual, getDataFromMultisig, getDataFromXPub  } from '../utils/transactions';
 
 const getTxHex = async (txid, currentBitcoinNetwork) => {
   const txHex = await (await axios.get(blockExplorerAPIURL(`/tx/${txid}/hex`, getUnchainedNetworkFromBjslibNetwork(currentBitcoinNetwork)))).data;
@@ -231,4 +231,30 @@ export const combinePsbts = (finalPsbt, signedPsbts) => {
     psbt.combine(...base64SignedPsbts);
   }
   return psbt;
+}
+
+export const getAccountData = async (config, currentBitcoinNetwork) => {
+  let addresses, changeAddresses, transactions, unusedAddresses, unusedChangeAddresses, availableUtxos;
+
+  if (config.quorum.totalSigners > 1) {
+    [addresses, changeAddresses, transactions, unusedAddresses, unusedChangeAddresses, availableUtxos] = await getDataFromMultisig(config, currentBitcoinNetwork);
+  } else {
+    [addresses, changeAddresses, transactions, unusedAddresses, unusedChangeAddresses, availableUtxos] = await getDataFromXPub(config, currentBitcoinNetwork);
+  }
+
+  const currentBalance = availableUtxos.reduce((accum, utxo) => accum.plus(utxo.value), BigNumber(0));
+
+  const accountData = {
+    name: config.name,
+    config: config,
+    addresses,
+    changeAddresses,
+    availableUtxos,
+    transactions,
+    unusedAddresses,
+    currentBalance: currentBalance.toNumber(),
+    unusedChangeAddresses
+  };
+
+  return accountData;
 }

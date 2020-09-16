@@ -17,7 +17,7 @@ const signtx = async (deviceType, devicePath, psbt) => {
 }
 
 const displayaddress = async (deviceType, devicePath, path) => {
-  return await runCommand(['-t', deviceType, '-d', devicePath, 'getxpub', path])
+  return await runCommand(['-t', deviceType, '-d', devicePath, 'displayaddress', path])
 }
 
 const promptpin = async (deviceType, devicePath) => {

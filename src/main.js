@@ -5,9 +5,8 @@ const { networks } = require('bitcoinjs-lib');
 const BigNumber = require('bignumber.js');
 const { download } = require('electron-dl');
 
-const { enumerate, getXPub, signtx, promptpin, sendpin } = require('./server/commands');
-const { getAccountData } = require('./server/accounts');
-const { getDataFromMultisig, getDataFromXPub } = require('./utils/transactions');
+const { signtx, promptpin, sendpin } = require('./server/commands');
+const { devEnum, devXpub } = require('./server/device');
 
 const path = require('path');
 
@@ -108,23 +107,12 @@ ipcMain.handle('/historical-btc-price', async (event, args) => {
 });
 
 ipcMain.handle('/enumerate', async (event, args) => {
-  const resp = JSON.parse(await enumerate());
-  if (resp.error) {
-    return Promise.reject(new Error('Error enumerating hardware wallets'))
-  }
-  const filteredDevices = resp.filter((device) => {
-    return device.type === 'coldcard' || device.type === 'ledger' || device.type === 'trezor';
-  })
-  return Promise.resolve(filteredDevices);
+  return await devEnum();
 });
 
 ipcMain.handle('/xpub', async (event, args) => {
   const { deviceType, devicePath, path } = args;
-  const resp = JSON.parse(await getXPub(deviceType, devicePath, path)); // responses come back as strings, need to be parsed
-  if (resp.error) {
-    return Promise.reject(new Error('Error extracting xpub'));
-  }
-  return Promise.resolve(resp);
+  devXpub(deviceType, devicePath, path);
 });
 
 ipcMain.handle('/sign', async (event, args) => {

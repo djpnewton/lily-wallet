@@ -7,6 +7,7 @@ import { createColdCardBlob, downloadFile, formatFilename } from '../../utils/fi
 import { black } from '../../utils/colors';
 import { getMultisigDeriationPathForNetwork, getP2shDeriationPathForNetwork } from '../../utils/transactions';
 import { newMnemonic, createSinglesigConfig, createSinglesigHWWConfig, createMultisigConfig, encryptConfig } from '../../wallet/config';
+import { newDevice } from '../../wallet/device';
 
 import StepGroups from './Steps';
 import PageHeader from './PageHeader';
@@ -49,7 +50,8 @@ const Setup = ({ config, setConfigFile, currentBitcoinNetwork }) => {
         path: getMultisigDeriationPathForNetwork(currentBitcoinNetwork) // we are assuming BIP48 P2WSH wallet
       });
 
-      setImportedDevices([...importedDevices, { ...device, ...response }]);
+      const importedDevice = newDevice(device.type, device.model, device.path, device.fingerprint, response.xpub);
+      setImportedDevices([...importedDevices, importedDevice]);
       availableDevices.splice(index, 1);
       if (errorDevices.includes(device.fingerprint)) {
         const errorDevicesCopy = [...errorDevices];
@@ -73,7 +75,8 @@ const Setup = ({ config, setConfigFile, currentBitcoinNetwork }) => {
         path: getP2shDeriationPathForNetwork(currentBitcoinNetwork) // we are assuming BIP48 P2WSH wallet
       });
 
-      setImportedDevices([...importedDevices, { ...device, ...response }]);
+      const importedDevice = newDevice(device.type, device.model, device.path, device.fingerprint, response.xpub);
+      setImportedDevices([...importedDevices, importedDevice]);
       availableDevices.splice(index, 1);
       if (errorDevices.includes(device.fingerprint)) {
         const errorDevicesCopy = [...errorDevices];
@@ -95,13 +98,9 @@ const Setup = ({ config, setConfigFile, currentBitcoinNetwork }) => {
     const zpub = bs58check.decode(parsedFile.p2wsh);
     const xpub = zpubToXpub(zpub);
 
-    const newDevice = {
-      type: 'coldcard',
-      fingerprint: parsedFile.xfp,
-      xpub: xpub
-    }
+    const importedDevice = newDevice('coldcard', null, null, parsedFile.xfp, xpub);
 
-    const updatedImportedDevices = [...importedDevices, newDevice];
+    const updatedImportedDevices = [...importedDevices, importedDevice];
     setImportedDevices(updatedImportedDevices)
   }
 
@@ -113,13 +112,12 @@ const Setup = ({ config, setConfigFile, currentBitcoinNetwork }) => {
       const zpub = bs58check.decode(parsedFile[`x${i}/`].xpub);
       const xpub = zpubToXpub(zpub);
 
-      const newDevice = {
-        type: parsedFile[`x${i}/`].hw_type,
-        fingerprint: parsedFile[`x${i}/`].label.substring(parsedFile[`x${i}/`].label.indexOf('Coldcard ') + 'Coldcard '.length),
-        xpub: xpub
-      };
+      const importedDevice = newDevice(
+        parsedFile[`x${i}/`].hw_type, null, null, 
+        parsedFile[`x${i}/`].label.substring(parsedFile[`x${i}/`].label.indexOf('Coldcard ') + 'Coldcard '.length),
+        xpub);
 
-      devicesFromFile.push(newDevice);
+      devicesFromFile.push(importedDevice);
     }
     const updatedImportedDevices = [...importedDevices, ...devicesFromFile];
     setImportedDevices([...importedDevices, ...devicesFromFile])
